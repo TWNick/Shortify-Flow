@@ -1,0 +1,17 @@
+# Virtual environment
+venv/
+.venv/
+
+# Environment secrets
+.env
+
+# Workspace data
+workspace/
+*.mp4
+*.wav
+*.srt
+*.json
+
+# OS files
+.DS_Store
+Thumbs.db

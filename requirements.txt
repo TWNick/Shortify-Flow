@@ -1,0 +1,8 @@
+yt-dlp
+faster-whisper
+playwright
+edge-tts
+moviepy
+requests
+google-generativeai
+python-dotenv
