@@ -488,6 +488,54 @@ class FlowVideoGenerator:
                 }""")
                 
                 if not click_res.get("success"):
+                    # Check if there is a warning/alert element in the prompt container area
+                    alert_locator = page.locator("div:has(img[src*='flow_alert_sphere.svg']), div:has(i:has-text('info')), [class*='alert'], [class*='hicSpj']").last
+                    if await alert_locator.count() > 0:
+                        logger.warning("Alert sphere or warning icon detected instead of the Generate button. Attempting to extract error message...")
+                        try:
+                            # 1. Hover first to trigger tooltip
+                            await alert_locator.hover()
+                            await page.wait_for_timeout(1500)
+                        except Exception as hover_err:
+                            logger.debug(f"Failed to hover warning icon: {hover_err}")
+                        
+                        # Check for error text in the page after hover
+                        error_msg = await page.evaluate("""() => {
+                            const bodyText = document.body.innerText;
+                            const keywords = ["点数", "AI 点数不足", "余额", "限制", "quota", "limit", "credits", "不足", "额度", "點數", "餘額"];
+                            const lines = bodyText.split('\\n').map(l => l.trim()).filter(Boolean);
+                            for (const line of lines) {
+                                if (keywords.some(k => line.toLowerCase().includes(k)) && line.length < 200) {
+                                    return line;
+                                }
+                            }
+                            return null;
+                        }""")
+                        
+                        if not error_msg:
+                            # 2. Click if hover didn't reveal the message
+                            try:
+                                await alert_locator.click()
+                                await page.wait_for_timeout(1500)
+                                error_msg = await page.evaluate("""() => {
+                                    const bodyText = document.body.innerText;
+                                    const keywords = ["点数", "AI 点数不足", "余额", "限制", "quota", "limit", "credits", "不足", "额度", "點數", "餘額"];
+                                    const lines = bodyText.split('\\n').map(l => l.trim()).filter(Boolean);
+                                    for (const line of lines) {
+                                        if (keywords.some(k => line.toLowerCase().includes(k)) && line.length < 200) {
+                                            return line;
+                                        }
+                                    }
+                                    return null;
+                                }""")
+                            except Exception as click_err:
+                                logger.debug(f"Failed to click warning icon: {click_err}")
+                        
+                        if error_msg:
+                            raise RuntimeError(f"Google Flow video generation blocked by warning: {error_msg}")
+                        else:
+                            raise RuntimeError("Google Flow video generation blocked. Generate button is replaced by a warning/info icon (possibly insufficient credits/points or prompt length limit).")
+                    
                     # Fallback to direct locator if JS traversal failed
                     generate_btn = page.locator("button:has-text('arrow_forward')")
                     if await generate_btn.count() > 0:

@@ -190,7 +190,8 @@ class ScriptRewriter:
                     "1. We have uploaded a reference image from the source video. You MUST analyze this image to identify the main subject/character (e.g., a cat, a dog, a specific object, a developer) and the background/environment/scene (e.g., a cardboard box in a living room, a desk, an outdoor field).\n"
                     "2. You MUST use the exact main subject and background environment found in the uploaded image as the visual theme for all scenes in this video! Do NOT use default human workspace templates unless the uploaded image actually shows a human workspace. The video scenes must show this specific subject performing the new topic's actions.\n"
                     "3. Every scene's prompt must describe a repetitive action featuring this subject that can loop seamlessly (using words like 'seamless loop', 'looping motion', 'cinemagraph loop'). Everything must look like real life (photorealistic, real-life footage style, cinematic lighting, 9:16 vertical aspect ratio).\n"
-                    "4. SCRIPT LOOPING: The last scene of the video must seamlessly loop back to the first scene. The ending prompt and overlay text must logically transition back into the starting scene, creating a perfect infinite loop when the video repeats.\n\n"
+                    "4. PROMPT LENGTH LIMIT: The entire text of the 'prompt' value MUST be extremely short, concise, and strictly under 230 characters! If it exceeds 230 characters, the generation will fail. Combine the style and action description very compactly.\n"
+                    "5. SCRIPT LOOPING: The last scene of the video must seamlessly loop back to the first scene. The ending prompt and overlay text must logically transition back into the starting scene, creating a perfect infinite loop when the video repeats.\n\n"
                 )
             else:
                 system_prompt = (
@@ -202,15 +203,16 @@ class ScriptRewriter:
                     "The message must be conveyed ENTIRELY through dynamic visual actions and very short bold text overlays on screen (e.g., 1-3 words or symbols).\n\n"
                     
                     "STYLE & INFINITE LOOP REQUIREMENT:\n"
-                    "1. You MUST choose exactly ONE photorealistic visual style for the entire video from the list below to keep all scenes visually consistent, and include its exact description in every scene's prompt. Everything must look like real life (photorealistic, real people, real objects, natural camera footage, cinematic lighting, 9:16 vertical aspect ratio).\n"
+                    "1. You MUST choose exactly ONE photorealistic visual style for the entire video from the list below to keep all scenes visually consistent, and include its exact description in every scene's prompt. Everything must look like real life.\n"
                     "2. Every scene's prompt must describe a repetitive action that can loop seamlessly (using words like 'seamless loop', 'looping motion', 'cinemagraph loop').\n"
-                    "3. SCRIPT LOOPING: The last scene of the video must seamlessly loop back to the first scene. The ending prompt and overlay text must logically transition back into the starting scene, creating a perfect infinite loop when the video repeats.\n\n"
+                    "3. PROMPT LENGTH LIMIT: The entire text of the 'prompt' value MUST be extremely short, concise, and strictly under 230 characters! If it exceeds 230 characters, the generation will fail. Make sure your scene action descriptions are very brief and to the point.\n"
+                    "4. SCRIPT LOOPING: The last scene of the video must seamlessly loop back to the first scene. The ending prompt and overlay text must logically transition back into the starting scene, creating a perfect infinite loop when the video repeats.\n\n"
                     "Choose from one of these 5 realistic loop templates:\n"
-                    "- Style 1 (Realistic Workspace Loop): Photorealistic, real-life footage style, a real person in a modern workspace performing a simple looping action (e.g. typing on a laptop, writing in a notepad, drinking coffee), natural cinematic lighting, highly detailed, 9:16 vertical aspect ratio, seamless loop motion.\n"
-                    "- Style 2 (Realistic City Cinemagraph): Photorealistic, real-life city street style, real people walking in the background with a central subject in a perfect cinemagraph loop (e.g. holding a phone while background traffic flows in a seamless loop), cinematic city lights, shallow depth of field, 9:16 vertical aspect ratio, seamless loop.\n"
-                    "- Style 3 (Realistic Cozy Home Loop): Photorealistic, real-life cozy indoor home environment, a real person sitting on a sofa or table doing a repetitive looping action (e.g. petting a cat, writing in a journal, thinking with a hand on chin), soft natural window light, highly detailed textures, 9:16 vertical aspect ratio, seamless loop.\n"
-                    "- Style 4 (Realistic Outdoor Travel Loop): Photorealistic, real-life outdoor travel/nature setting, a real person looking at a scenic view with natural looping movement (e.g. wind blowing through hair, waves crashing on the shore in a perfect loop, adjusting sunglasses), gorgeous ambient sunlight, 9:16 vertical aspect ratio, seamless loop.\n"
-                    "- Style 5 (Realistic Studio Close-Up Loop): Photorealistic, high-end commercial studio close-up, a real person performing a micro looping action (e.g. hands clicking a mouse, writing on a tablet, nodding with a subtle thumbs-up), professional studio lighting, crisp detail, 9:16 vertical aspect ratio, seamless loop.\n\n"
+                    "- Style 1 (Realistic Workspace Loop): Real-life footage, modern workspace, cinematic lighting, 9:16 vertical, seamless loop.\n"
+                    "- Style 2 (Realistic City Cinemagraph): Real-life city street, central subject in cinemagraph loop, 9:16 vertical, seamless loop.\n"
+                    "- Style 3 (Realistic Cozy Home Loop): Real-life cozy home, warm window light, 9:16 vertical, seamless loop.\n"
+                    "- Style 4 (Realistic Outdoor Travel Loop): Real-life outdoor travel, scenic view, sunlight, 9:16 vertical, seamless loop.\n"
+                    "- Style 5 (Realistic Studio Close-Up Loop): Commercial studio close-up, professional lighting, 9:16 vertical, seamless loop.\n\n"
                 )
             
             if target_domain:
@@ -230,7 +232,7 @@ class ScriptRewriter:
                 "    {\n"
                 "      \"start_pct\": 0.0, \n"
                 "      \"end_pct\": 0.15,\n"
-                "      \"prompt\": \"Detailed descriptive prompt for generating a background video segment. You MUST include the exact style description of the chosen style in this prompt, and describe the seamless looping action.\",\n"
+                "      \"prompt\": \"Concise prompt for video generation. Combine the chosen style description and the looping action. MUST BE UNDER 230 CHARACTERS TOTAL.\",\n"
                 "      \"overlay_text\": \"Extremely short visual overlay text to be printed in bold on screen (e.g., SLICE!, TRY THIS, BOOM!, FIXED!)\"\n"
                 "    }\n"
                 "  ]\n"
