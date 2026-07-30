@@ -107,19 +107,11 @@ class AutoPublisher:
                 await page.wait_for_timeout(5000)
                 
                 # Clear and fill Title
-                # Clear and fill Title
                 await title_box.click()
                 await page.keyboard.press("Control+A")
                 await page.keyboard.press("Backspace")
                 await title_box.fill(title)
-                await page.wait_for_timeout(1000)
-                await page.keyboard.press("Escape") # Dismiss autocomplete suggestions dropdown
-                await page.wait_for_timeout(1000)
-                # Click outside to blur title suggestions
-                try:
-                    await page.click("ytcp-uploads-dialog .title", timeout=2000)
-                except Exception:
-                    pass
+                await page.wait_for_timeout(1500)
                 
                 # Double check if title is filled, if not, fill it again
                 current_title = await title_box.inner_text()
@@ -129,13 +121,7 @@ class AutoPublisher:
                     await page.keyboard.press("Control+A")
                     await page.keyboard.press("Backspace")
                     await title_box.fill(title)
-                    await page.wait_for_timeout(1000)
-                    await page.keyboard.press("Escape")
-                    await page.wait_for_timeout(1000)
-                    try:
-                        await page.click("ytcp-uploads-dialog .title", timeout=2000)
-                    except Exception:
-                        pass
+                    await page.wait_for_timeout(1500)
                 
                 logger.info(f"Filled Title: {title}")
 
@@ -162,9 +148,6 @@ class AutoPublisher:
                     except Exception as inner_err:
                         logger.error(f"Failed to fill description: {inner_err}")
                 logger.info("Filled Description.")
-
-                # Dismiss autocomplete overlay by pressing Escape
-                await page.keyboard.press("Escape")
                 await page.wait_for_timeout(1000)
                 
                 # Mark as 'not made for kids' (required step)
