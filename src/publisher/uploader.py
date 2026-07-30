@@ -107,6 +107,7 @@ class AutoPublisher:
                 await page.wait_for_timeout(5000)
                 
                 # Clear and fill Title
+                # Clear and fill Title
                 await title_box.click()
                 await page.keyboard.press("Control+A")
                 await page.keyboard.press("Backspace")
@@ -114,6 +115,11 @@ class AutoPublisher:
                 await page.wait_for_timeout(1000)
                 await page.keyboard.press("Escape") # Dismiss autocomplete suggestions dropdown
                 await page.wait_for_timeout(1000)
+                # Click outside to blur title suggestions
+                try:
+                    await page.click("ytcp-uploads-dialog .title", timeout=2000)
+                except Exception:
+                    pass
                 
                 # Double check if title is filled, if not, fill it again
                 current_title = await title_box.inner_text()
@@ -124,84 +130,125 @@ class AutoPublisher:
                     await page.keyboard.press("Backspace")
                     await title_box.fill(title)
                     await page.wait_for_timeout(1000)
-                    await page.keyboard.press("Escape") # Dismiss autocomplete suggestions dropdown
+                    await page.keyboard.press("Escape")
                     await page.wait_for_timeout(1000)
+                    try:
+                        await page.click("ytcp-uploads-dialog .title", timeout=2000)
+                    except Exception:
+                        pass
                 
                 logger.info(f"Filled Title: {title}")
 
                 # Fill Description
                 desc_box = page.locator("#description-textarea #textbox")
                 try:
-                    await desc_box.click(timeout=5000)
-                except Exception as click_err:
-                    logger.warning(f"Normal click on description box failed: {click_err}. Trying force click...")
-                    await desc_box.click(force=True)
-                await page.keyboard.press("Control+A")
-                await page.keyboard.press("Backspace")
-                await desc_box.fill(description)
+                    await desc_box.first.wait_for(state="visible", timeout=10000)
+                    # Directly evaluate text input using JS or force click
+                    await page.evaluate("""(text) => {
+                        const box = document.querySelector('#description-textarea #textbox');
+                        if (box) {
+                            box.focus();
+                            box.innerText = text;
+                            box.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    }""", description)
+                except Exception as desc_err:
+                    logger.warning(f"Direct description fill failed: {desc_err}. Trying standard click and fill...")
+                    try:
+                        await desc_box.first.click(force=True, timeout=5000)
+                        await page.keyboard.press("Control+A")
+                        await page.keyboard.press("Backspace")
+                        await desc_box.first.fill(description)
+                    except Exception as inner_err:
+                        logger.error(f"Failed to fill description: {inner_err}")
                 logger.info("Filled Description.")
 
-                # Dismiss autocomplete overlay by shifting focus to the title container
-                try:
-                    await page.locator("#title-textarea").first.click()
-                    await page.wait_for_timeout(1000)
-                except Exception as focus_err:
-                    logger.warning(f"Could not shift focus: {focus_err}")
+                # Dismiss autocomplete overlay by pressing Escape
                 await page.keyboard.press("Escape")
                 await page.wait_for_timeout(1000)
                 
-                try:
-                    await page.evaluate("document.querySelector('#scrollable-content').scrollTop = 1000")
-                    await page.wait_for_timeout(1000)
-                except Exception as scroll_err:
-                    logger.warning(f"Could not scroll container: {scroll_err}")
-
                 # Mark as 'not made for kids' (required step)
-                kids_radio = page.locator("tp-yt-paper-radio-button[name='VIDEO_MADE_FOR_KIDS_NOT_MADE_FOR_KIDS'], ytcp-radio-button[name='VIDEO_MADE_FOR_KIDS_NOT_MADE_FOR_KIDS']")
-                if await kids_radio.count() == 0:
-                    # Using unicode escapes to prevent encoding corruption on Windows/CP950
-                    # "\u5426\uff0c\u9019" matches "否，這"
-                    kids_radio = page.locator("tp-yt-paper-radio-button, ytcp-radio-button, paper-radio-button, .radio-button").filter(
-                        has_text=re.compile("(No, it's not made for kids|\u5426\uff0c\u9019|No, it is not made for kids)", re.IGNORECASE)
-                    )
-                
-                await kids_radio.scroll_into_view_if_needed()
-                await kids_radio.click()
+                logger.info("Selecting 'Not made for kids'...")
+                try:
+                    await page.evaluate("""() => {
+                        const radios = Array.from(document.querySelectorAll('tp-yt-paper-radio-button, ytcp-radio-button, paper-radio-button, [role="radio"]'));
+                        // Find the one containing "No" or "否"
+                        const kidsNo = radios.find(r => {
+                            const text = r.textContent || '';
+                            return text.includes('No') || text.includes('否');
+                        });
+                        if (kidsNo) {
+                            kidsNo.scrollIntoView({ block: 'center' });
+                            kidsNo.click();
+                        } else {
+                            // Fallback to name selector
+                            const nameRadio = document.querySelector('[name="VIDEO_MADE_FOR_KIDS_NOT_MADE_FOR_KIDS"]');
+                            if (nameRadio) nameRadio.click();
+                        }
+                    }""")
+                    await page.wait_for_timeout(2000)
+                except Exception as kids_err:
+                    logger.warning(f"JS kids selection failed: {kids_err}")
                 
                 # Click Next buttons through the wizard steps
                 # There are 3-4 "Next" buttons depending on the channel status
-                next_btn_selector = "#next-button"
+                logger.info("Navigating through wizard steps...")
                 for step in range(3):
-                    next_btn = page.locator(next_btn_selector)
-                    await next_btn.wait_for(state="visible")
-                    await next_btn.click()
-                    logger.info(f"Clicked Next button (Step {step + 1})")
-                    await page.wait_for_timeout(2000)
+                    try:
+                        await page.evaluate("""() => {
+                            const nextBtn = document.querySelector('#next-button') || document.querySelector('ytcp-button[id="next-button"]');
+                            if (nextBtn) {
+                                nextBtn.scrollIntoView({ block: 'center' });
+                                nextBtn.click();
+                            }
+                        }""")
+                        logger.info(f"Clicked Next button (Step {step + 1})")
+                        await page.wait_for_timeout(2500)
+                    except Exception as step_err:
+                        logger.warning(f"Failed to click Next button on step {step+1}: {step_err}")
 
                 # Visibility step: set to public
                 logger.info("Setting visibility to Public...")
-                public_radio = page.locator("tp-yt-paper-radio-button[name='PUBLIC'], ytcp-radio-button[name='PUBLIC']")
-                if await public_radio.count() == 0:
-                    # "\u516c\u958b" matches "公開"
-                    public_radio = page.locator("tp-yt-paper-radio-button, ytcp-radio-button, paper-radio-button").filter(
-                        has_text=re.compile("(Public|\u516c\u958b)", re.IGNORECASE)
-                    )
-                await public_radio.scroll_into_view_if_needed()
-                await public_radio.click()
+                try:
+                    await page.evaluate("""() => {
+                        const radios = Array.from(document.querySelectorAll('tp-yt-paper-radio-button, ytcp-radio-button, paper-radio-button, [role="radio"]'));
+                        const publicRadio = radios.find(r => {
+                            const text = r.textContent || '';
+                            return text.includes('Public') || text.includes('公開') || text.includes('公开');
+                        });
+                        if (publicRadio) {
+                            publicRadio.scrollIntoView({ block: 'center' });
+                            publicRadio.click();
+                        }
+                    }""")
+                    await page.wait_for_timeout(2000)
+                except Exception as vis_err:
+                    logger.warning(f"Failed to set visibility: {vis_err}")
 
                 # Click Publish button (which has id='done-button' or 'publish-button')
-                publish_btn = page.locator("#done-button, #publish-button")
-                if await publish_btn.count() == 0:
-                    # Unicode escapes for "公開發布", "發布", "完成"
-                    publish_btn = page.locator("ytcp-button").filter(
-                        has_text=re.compile("(Publish|Done|\u516c\u958b\u767c\u5e03|\u767c\u5e03|\u5b8c\u6210)", re.IGNORECASE)
-                    )
-                await publish_btn.wait_for(state="visible")
-                await publish_btn.click()
-                logger.info("Clicked Publish button!")
+                logger.info("Publishing video...")
+                try:
+                    await page.evaluate("""() => {
+                        const doneBtn = document.querySelector('#done-button') || document.querySelector('#publish-button') || document.querySelector('ytcp-button[id="done-button"]');
+                        if (doneBtn) {
+                            doneBtn.scrollIntoView({ block: 'center' });
+                            doneBtn.click();
+                        } else {
+                            // Find any button with text "Publish", "Done", "發布", "完成"
+                            const btns = Array.from(document.querySelectorAll('ytcp-button, button'));
+                            const pubBtn = btns.find(b => {
+                                const text = b.textContent || '';
+                                return text.includes('Publish') || text.includes('Done') || text.includes('發布') || text.includes('完成') || text.includes('公开发布');
+                            });
+                            if (pubBtn) pubBtn.click();
+                        }
+                    }""")
+                    logger.info("Clicked Publish button!")
+                    await page.wait_for_timeout(5000)
+                except Exception as pub_err:
+                    logger.error(f"Failed to click publish button: {pub_err}")
+                    raise pub_err
 
-                # Wait for completion dialog
-                await page.wait_for_timeout(5000)
                 logger.info("Upload and publish completed successfully.")
             except Exception as e:
                 logger.error(f"Failed to upload video: {e}")
