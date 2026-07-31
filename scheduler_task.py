@@ -17,14 +17,15 @@ logger = logging.getLogger("Scheduler")
 
 QUERIES = [
     "funny programmer shorts",
-    "coding life hacks",
-    "VS Code shortcut tips",
-    "software developer memes",
-    "python programming tricks",
-    "web developer secrets",
-    "github tips and hacks",
-    "local LLM setup tutorial shorts",
-    "ai coding assistant hacks"
+    "coding life hacks shorts",
+    "VS Code shortcut tips shorts",
+    "software developer memes shorts",
+    "python programming tricks shorts",
+    "web developer secrets shorts",
+    "github tips and hacks shorts",
+    "ai coding assistant hacks shorts",
+    "funny pet shorts",
+    "funny cat shorts"
 ]
 
 def get_next_query():
@@ -49,20 +50,32 @@ def get_next_query():
         
     return query
 
+import argparse
+
 def main():
+    parser = argparse.ArgumentParser(description="Shortify-Flow Scheduler Task")
+    parser.add_argument(
+        "--mode", 
+        choices=["commentary", "flow"], 
+        default="commentary", 
+        help="Select video generation mode: 'commentary' for voiceover二創, 'flow' for Google Labs Flow AI video generation"
+    )
+    args = parser.parse_args()
+
     logger.info("=========================================")
-    logger.info("Starting scheduled Shortify-Flow run...")
+    logger.info(f"Starting scheduled Shortify-Flow run ({args.mode} mode)...")
     
     query = get_next_query()
     logger.info(f"Selected query for this run: '{query}'")
     
     # Set up command
     python_exe = os.path.join("venv", "Scripts", "python.exe")
+    mode_flag = "--commentary" if args.mode == "commentary" else "--flow-video"
     cmd = [
         python_exe, "main.py",
         "--action", "run",
         "--search-query", query,
-        "--flow-video",
+        mode_flag,
         "--publish"
     ]
     
