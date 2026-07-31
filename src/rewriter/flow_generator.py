@@ -394,7 +394,7 @@ class FlowVideoGenerator:
                         pass
                 
                 # 4. Configure to Video mode and 9:16 aspect ratio
-                settings_btn = page.locator("button:has(i:has-text('crop_')), button:has-text('Nano Banana')").first
+                settings_btn = page.locator("button:has-text('tune 设置'), button:has(i:has-text('tune')), button:has(i:has-text('crop_')), button:has-text('Nano Banana')").first
                 
                 # Wait for settings button to be visible
                 try:
@@ -413,14 +413,7 @@ class FlowVideoGenerator:
                         await video_tab.first.click()
                         await page.wait_for_timeout(1500)
                     else:
-                        logger.warning("Video tab option not found.")
-                        
-                    # Re-open settings menu if it closed automatically after selecting video mode
-                    menu_visible = await page.locator("[class*='DropdownMenuContent'], div[role='menu']").count() > 0
-                    if not menu_visible:
-                        logger.info("Re-opening model settings dropdown...")
-                        await settings_btn.click()
-                        await page.wait_for_timeout(1500)
+                        logger.info("Video tab option not found (using default video model settings).")
                         
                     ratio_tab = page.locator("button[role='tab']:has-text('9:16'), button[id*='trigger-PORTRAIT']")
                     if await ratio_tab.count() > 0:
@@ -430,9 +423,16 @@ class FlowVideoGenerator:
                     else:
                         logger.warning("9:16 aspect ratio option not found.")
                         
-                    # Close settings menu
-                    await page.keyboard.press("Escape")
-                    await page.wait_for_timeout(1000)
+                    # Click '保存' (Save) button to apply settings in new UI
+                    save_btn = page.locator("button:has-text('保存'), button:has-text('Save')")
+                    if await save_btn.count() > 0:
+                        logger.info("Clicking Save settings button...")
+                        await save_btn.first.click()
+                        await page.wait_for_timeout(1500)
+                    else:
+                        # Close settings menu via Escape if no Save button exists
+                        await page.keyboard.press("Escape")
+                        await page.wait_for_timeout(1000)
                     
                     logger.info(f"Successfully configured Flow settings: {await settings_btn.inner_text()}")
                 else:
@@ -443,10 +443,17 @@ class FlowVideoGenerator:
                 if await editors.count() > 0:
                     logger.info("Inputting generation prompt...")
                     prompt_editor = editors.first
+                    await prompt_editor.click(force=True)
+                    await page.wait_for_timeout(1000)
+                    
+                    # Focus and clear text using standard keyboard presses
                     await prompt_editor.focus()
                     await page.keyboard.press("Control+A")
                     await page.keyboard.press("Delete")
-                    await prompt_editor.fill(prompt)
+                    await page.wait_for_timeout(500)
+                    
+                    # Type prompt text using Playwright keyboard API to trigger Slate.js state synchronization
+                    await page.keyboard.type(prompt)
                     await page.wait_for_timeout(2000)
                 else:
                     raise RuntimeError("Could not find prompt editor textarea.")
