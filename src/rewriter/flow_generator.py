@@ -415,6 +415,13 @@ class FlowVideoGenerator:
                     else:
                         logger.info("Video tab option not found (using default video model settings).")
                         
+                    # Select "永不" (Never ask/AUTO_APPROVE) point confirmation setting
+                    auto_approve_btn = page.locator("button[role='radio']:has-text('永不'), button[value='AUTO_APPROVE']")
+                    if await auto_approve_btn.count() > 0:
+                        logger.info("Selecting Auto Approve points settings...")
+                        await auto_approve_btn.first.click()
+                        await page.wait_for_timeout(1000)
+                        
                     ratio_tab = page.locator("button[role='tab']:has-text('9:16'), button[id*='trigger-PORTRAIT']")
                     if await ratio_tab.count() > 0:
                         logger.info("Selecting '9:16' aspect ratio...")
@@ -439,6 +446,16 @@ class FlowVideoGenerator:
                     logger.warning("Could not find model settings button.")
                 
                 # 5. Input prompt
+                # Cancel any default templates or welcome runs first by clicking the stop button if visible
+                stop_btn = page.locator("button:has(i:has-text('stop')), button:has(i:has-text('stop_circle'))")
+                if await stop_btn.count() > 0 and await stop_btn.first.is_visible():
+                    logger.info("Chat assistant is busy generating default template. Clicking stop button to cancel...")
+                    try:
+                        await stop_btn.first.click(timeout=3000)
+                        await page.wait_for_timeout(2000)
+                    except Exception as stop_err:
+                        logger.warning(f"Could not click stop button: {stop_err}")
+                
                 editors = page.locator("[contenteditable='true']")
                 if await editors.count() > 0:
                     logger.info("Inputting generation prompt...")
@@ -458,41 +475,28 @@ class FlowVideoGenerator:
                 else:
                     raise RuntimeError("Could not find prompt editor textarea.")
                 
-                # 6. Click generate button (arrow_forward or warning/info button if blocked)
+                # 6. Click generate button (arrow_forward)
                 logger.info("Locating and submitting video generation task...")
+                gen_btn = page.locator("button:has(i:has-text('arrow_forward')), button:has-text('arrow_forward')").first
                 try:
-                    # Wait up to 10 seconds for the generate button to become visible and stable in the DOM
-                    await page.locator("button:has-text('arrow_forward'), button:has-text('创建'), button:has-text('Create')").first.wait_for(state="visible", timeout=10000)
+                    await gen_btn.wait_for(state="visible", timeout=15000)
                 except Exception as wait_err:
                     logger.warning(f"Timeout waiting for generate button visibility: {wait_err}")
                 
-                click_res = await page.evaluate("""() => {
-                    const ed = document.querySelector("[contenteditable='true']");
-                    if (!ed) return { success: false, error: "Prompt editor not found" };
-                    let parent = ed.parentElement;
-                    while (parent) {
-                        const btns = parent.querySelectorAll("button");
-                        // The prompt container has multiple buttons, and the last button is the generate action button
-                        if (btns.length >= 2 && Array.from(btns).some(b => b.textContent.includes("arrow_forward") || b.innerHTML.includes("arrow_forward") || b.textContent.includes("info") || b.innerHTML.includes("info"))) {
-                            const genBtn = btns[btns.length - 1];
-                            const isWarning = genBtn.textContent.includes("info") || genBtn.innerHTML.includes("info");
-                            const isDisabled = genBtn.disabled || genBtn.getAttribute("disabled") !== null;
-                            
-                            // Click the button
-                            genBtn.click();
-                            
-                            return {
-                                success: true,
-                                isWarning: isWarning,
-                                isDisabled: isDisabled,
-                                btnText: genBtn.textContent.trim(),
-                                btnHtml: genBtn.innerHTML
-                            };
-                        }
-                        parent = parent.parentElement;
-                    }
-                    return { success: false, error: "Generate button not found in container hierarchy" };
-                }""")
+                click_res = {"success": False, "error": None}
+                if await gen_btn.count() > 0:
+                    is_disabled = await gen_btn.get_attribute("aria-disabled") == "true" or await gen_btn.evaluate("el => el.disabled")
+                    if not is_disabled:
+                        try:
+                            logger.info("Clicking generate button via Playwright...")
+                            await gen_btn.click(timeout=5000)
+                            click_res["success"] = True
+                        except Exception as click_err:
+                            click_res["error"] = f"Click failed: {click_err}"
+                    else:
+                        click_res["error"] = "Generate button is disabled"
+                else:
+                    click_res["error"] = "Generate button not found on page"
                 
                 if not click_res.get("success"):
                     # Check if there is a warning/alert element in the prompt container area
@@ -584,6 +588,17 @@ class FlowVideoGenerator:
                 new_link = None
                 
                 while elapsed < max_wait:
+                    # Check and click point approval button if it appears in the chat
+                    approve_btn = page.locator("button:has-text('批准'), button:has-text('Approve')")
+                    if await approve_btn.count() > 0:
+                        for idx in range(await approve_btn.count()):
+                            btn = approve_btn.nth(idx)
+                            if await btn.is_visible():
+                                logger.info(f"Clicking points consumption approval button: '{await btn.inner_text()}'...")
+                                await btn.click()
+                                await page.wait_for_timeout(2000)
+                                break
+                                
                     await page.wait_for_timeout(check_interval * 1000)
                     elapsed += check_interval
                     
