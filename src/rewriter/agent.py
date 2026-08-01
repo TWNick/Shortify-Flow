@@ -311,6 +311,9 @@ class ScriptRewriter:
             system_prompt += f"Target Topic: Choose a trending topic within the '{target_domain}' domain.\n"
         else:
             system_prompt += "Target Topic: Choose a trending developer, productivity, or tech-hack topic.\n"
+            
+        # Always forbid referencing external files or image filenames to prevent Google Flow assets mismatch errors
+        system_prompt += "\nCRITICAL: You MUST NOT reference any image filenames (e.g. image_0.png, image_1.png, keyframe.png, input_file_0.png) in the 'prompt' fields of the generated scenes. Describe all visual subjects, characters, and settings textually instead. Do not assume any files are uploaded to the generation workspace.\n"
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=self.headless, args=["--disable-blink-features=AutomationControlled"])
