@@ -419,6 +419,17 @@ class ScriptRewriter:
                         await file_chooser.set_files(image_path)
                         logger.info("Reference image selected successfully. Waiting 6s for upload to complete...")
                         await page.wait_for_timeout(6000)
+                        
+                        # Click "同意" (Agree/Consent) button if upload consent modal appears
+                        consent_btn = page.locator("button:has-text('同意'), button:has-text('Agree')")
+                        if await consent_btn.count() > 0:
+                            for idx in range(await consent_btn.count()):
+                                btn = consent_btn.nth(idx)
+                                if await btn.is_visible():
+                                    logger.info("Detected upload consent modal. Clicking '同意'...")
+                                    await btn.click()
+                                    await page.wait_for_timeout(2000)
+                                    break
                     except Exception as upload_err:
                         logger.warning(f"Could not upload visual reference image: {upload_err}. Continuing with text only...")
                 
