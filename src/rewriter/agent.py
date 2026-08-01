@@ -444,6 +444,16 @@ class ScriptRewriter:
                         logger.warning(f"Could not upload visual reference image: {upload_err}. Continuing with text only...")
                 
                 # Input the prompt
+                # Click "同意" (Agree/Consent) or any welcome buttons if they are still visible
+                consent_btns = page.locator("button:has-text('同意'), button:has-text('Agree'), button:has-text('開始使用'), button:has-text('开始使用'), button:has-text('確定'), button:has-text('确定')")
+                if await consent_btns.count() > 0:
+                    for idx in range(await consent_btns.count()):
+                        btn = consent_btns.nth(idx)
+                        if await btn.is_visible():
+                            logger.info(f"Dismissing modal overlay before prompt entry: '{await btn.inner_text()}'")
+                            await btn.click()
+                            await page.wait_for_timeout(2000)
+                            
                 await prompt_input.click()
                 await prompt_input.fill(system_prompt)
                 await page.wait_for_timeout(1000)
