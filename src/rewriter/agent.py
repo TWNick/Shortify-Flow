@@ -353,6 +353,16 @@ class ScriptRewriter:
                 logger.info("Successfully loaded Gemini chat interface. Waiting 8s for WS connection to stabilize...")
                 await page.wait_for_timeout(8000)
                 
+                # Dismiss any welcome overlays or consent modals on page load
+                welcome_btns = page.locator("button:has-text('開始使用'), button:has-text('开始使用'), button:has-text('同意'), button:has-text('Agree'), button:has-text('確定'), button:has-text('确定')")
+                if await welcome_btns.count() > 0:
+                    for idx in range(await welcome_btns.count()):
+                        btn = welcome_btns.nth(idx)
+                        if await btn.is_visible():
+                            logger.info(f"Dismissing welcome modal by clicking button: '{await btn.inner_text()}'")
+                            await btn.click()
+                            await page.wait_for_timeout(2000)
+                
                 # Locate response messages before sending the prompt (using tag names message-content, model-response, and class .model-response-text)
                 response_locator = page.locator('message-content, model-response, .model-response-text')
                 initial_count = await response_locator.count()
