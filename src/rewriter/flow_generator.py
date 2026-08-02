@@ -324,6 +324,9 @@ class FlowVideoGenerator:
                         else:
                             raise RuntimeError(f"Failed to authenticate in workspace tab even after triggering login session. Current URL: {page.url}")
                 
+                # Wait 4 seconds to let any lazy-loaded changelog modals pop up
+                await page.wait_for_timeout(4000)
+                
                 # Dismiss any changelog iframes or welcome overlay popups to prevent blocking pointer events
                 try:
                     await page.evaluate("""() => {
@@ -348,7 +351,7 @@ class FlowVideoGenerator:
                             if (el === document.body || el === document.documentElement) return;
                             try {
                                 const style = window.getComputedStyle(el);
-                                if (style.position === 'fixed' && parseInt(style.zIndex) > 5) {
+                                if (style.position === 'fixed' || style.position === 'absolute') {
                                     if (el.offsetWidth > window.innerWidth * 0.8 && el.offsetHeight > window.innerHeight * 0.8) {
                                         el.remove();
                                     }
@@ -364,7 +367,7 @@ class FlowVideoGenerator:
                 add_btn = page.locator("button:has-text('add_2'), button:has-text('新建'), button:has-text('New Project')")
                 if await add_btn.count() > 0:
                     logger.info("Creating new project...")
-                    await add_btn.first.click()
+                    await add_btn.first.click(force=True)
                     
                     # Wait for redirect and editor element to be loaded
                     logger.info("Waiting for workspace page and editor to load...")
