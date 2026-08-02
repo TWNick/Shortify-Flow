@@ -494,7 +494,7 @@ class FlowVideoGenerator:
                     logger.info("Chat assistant is busy generating default template. Clicking stop button to cancel...")
                     try:
                         await stop_btn.first.click(timeout=3000)
-                        await page.wait_for_timeout(2000)
+                        await page.wait_for_timeout(5000)
                     except Exception as stop_err:
                         logger.warning(f"Could not click stop button: {stop_err}")
                 
