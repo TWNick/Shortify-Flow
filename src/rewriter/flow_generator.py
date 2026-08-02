@@ -327,10 +327,34 @@ class FlowVideoGenerator:
                 # Dismiss any changelog iframes or welcome overlay popups to prevent blocking pointer events
                 try:
                     await page.evaluate("""() => {
+                        // Find any iframe that might be a changelog or gallery popup
                         const iframes = document.querySelectorAll('iframe');
-                        iframes.forEach(f => f.remove());
-                        const overlays = document.querySelectorAll('[class*="overlay"], [class*="modal"], [class*="changelog"]');
-                        overlays.forEach(o => o.remove());
+                        iframes.forEach(iframe => {
+                            // Traverse up to find the wrapping modal container
+                            let parent = iframe.parentElement;
+                            let modalContainer = iframe;
+                            while (parent && parent !== document.body) {
+                                const style = window.getComputedStyle(parent);
+                                if (style.position === 'fixed' || style.position === 'absolute') {
+                                    modalContainer = parent;
+                                }
+                                parent = parent.parentElement;
+                            }
+                            modalContainer.remove();
+                        });
+                        
+                        // Also remove any remaining backdrops/overlays (elements with fixed/absolute positioning that cover the viewport)
+                        document.querySelectorAll('*').forEach(el => {
+                            if (el === document.body || el === document.documentElement) return;
+                            try {
+                                const style = window.getComputedStyle(el);
+                                if (style.position === 'fixed' && parseInt(style.zIndex) > 5) {
+                                    if (el.offsetWidth > window.innerWidth * 0.8 && el.offsetHeight > window.innerHeight * 0.8) {
+                                        el.remove();
+                                    }
+                                }
+                            } catch(e) {}
+                        });
                     }""")
                     logger.info("Checked and removed any blocking iframe/modal overlays on dashboard.")
                 except Exception as eval_err:
