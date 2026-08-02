@@ -364,10 +364,13 @@ class FlowVideoGenerator:
                     logger.warning(f"Failed to clear modal overlays: {eval_err}")
                 
                 # 2. Click 'add_2' or '新建' or 'New Project' to create a new project
+                # Wait 2 seconds for page to settle and React hydration to bind event listeners
+                await page.wait_for_timeout(2000)
+                
                 add_btn = page.locator("button:has-text('add_2'), button:has-text('新建'), button:has-text('New Project')")
                 if await add_btn.count() > 0:
                     logger.info("Creating new project...")
-                    await add_btn.first.click(force=True)
+                    await add_btn.first.click()
                     
                     # Wait for redirect and editor element to be loaded
                     logger.info("Waiting for workspace page and editor to load...")
