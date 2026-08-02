@@ -324,6 +324,18 @@ class FlowVideoGenerator:
                         else:
                             raise RuntimeError(f"Failed to authenticate in workspace tab even after triggering login session. Current URL: {page.url}")
                 
+                # Dismiss any changelog iframes or welcome overlay popups to prevent blocking pointer events
+                try:
+                    await page.evaluate("""() => {
+                        const iframes = document.querySelectorAll('iframe');
+                        iframes.forEach(f => f.remove());
+                        const overlays = document.querySelectorAll('[class*="overlay"], [class*="modal"], [class*="changelog"]');
+                        overlays.forEach(o => o.remove());
+                    }""")
+                    logger.info("Checked and removed any blocking iframe/modal overlays on dashboard.")
+                except Exception as eval_err:
+                    logger.warning(f"Failed to clear modal overlays: {eval_err}")
+                
                 # 2. Click 'add_2' or '新建' or 'New Project' to create a new project
                 add_btn = page.locator("button:has-text('add_2'), button:has-text('新建'), button:has-text('New Project')")
                 if await add_btn.count() > 0:
